@@ -9,15 +9,15 @@ contract TokenSale is Ownable {
     using SafeERC20 for IERC20;
 
     IERC20 public immutable token;
-    uint public immutable rate;      // tokens per 1 ETH
-    uint public immutable saleEnd;
+    uint256 public immutable rate; // tokens per 1 ETH
+    uint256 public immutable saleEnd;
 
-    uint public totalRaised;
-    mapping(address => uint) public contributions;
+    uint256 public totalRaised;
+    mapping(address => uint256) public contributions;
 
-    event TokensPurchased(address indexed buyer, uint ethPaid, uint tokensReceived);
-    event ProceedsWithdrawn(address indexed to, uint amount);
-    event UnsoldTokensRecovered(address indexed to, uint amount);
+    event TokensPurchased(address indexed buyer, uint256 ethPaid, uint256 tokensReceived);
+    event ProceedsWithdrawn(address indexed to, uint256 amount);
+    event UnsoldTokensRecovered(address indexed to, uint256 amount);
 
     error SaleEnded();
     error SaleNotEnded();
@@ -25,11 +25,11 @@ contract TokenSale is Ownable {
     error InvalidAddress();
     error InvalidRate();
     error InvalidDuration();
-    error NotEnoughTokensLeft(uint requested, uint available);
+    error NotEnoughTokensLeft(uint256 requested, uint256 available);
     error NothingToWithdraw();
     error TransferFailed();
 
-    constructor(address _token, uint _rate, uint _duration) Ownable(msg.sender) {
+    constructor(address _token, uint256 _rate, uint256 _duration) Ownable(msg.sender) {
         if (_token == address(0)) revert InvalidAddress();
         if (_rate == 0) revert InvalidRate();
         if (_duration == 0) revert InvalidDuration();
@@ -43,8 +43,8 @@ contract TokenSale is Ownable {
         if (block.timestamp >= saleEnd) revert SaleEnded();
         if (msg.value == 0) revert NoEthSent();
 
-        uint tokenAmount = msg.value * rate;
-        uint available = token.balanceOf(address(this));
+        uint256 tokenAmount = msg.value * rate;
+        uint256 available = token.balanceOf(address(this));
         if (tokenAmount > available) {
             revert NotEnoughTokensLeft(tokenAmount, available);
         }
@@ -59,26 +59,26 @@ contract TokenSale is Ownable {
     }
 
     function withdrawProceeds() external onlyOwner {
-        uint amount = address(this).balance;
+        uint256 amount = address(this).balance;
         if (amount == 0) revert NothingToWithdraw();
 
         emit ProceedsWithdrawn(owner(), amount);
 
-        (bool success, ) = owner().call{value: amount}("");
+        (bool success,) = owner().call{value: amount}("");
         if (!success) revert TransferFailed();
     }
 
     function recoverUnsoldTokens() external onlyOwner {
         if (block.timestamp < saleEnd) revert SaleNotEnded();
 
-        uint amount = token.balanceOf(address(this));
+        uint256 amount = token.balanceOf(address(this));
         if (amount == 0) revert NothingToWithdraw();
 
         emit UnsoldTokensRecovered(owner(), amount);
         token.safeTransfer(owner(), amount);
     }
 
-    function tokensRemaining() external view returns (uint) {
+    function tokensRemaining() external view returns (uint256) {
         return token.balanceOf(address(this));
     }
 

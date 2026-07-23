@@ -7,13 +7,13 @@ import {Escrow} from "../src/Escrow.sol";
 contract EscrowTest is Test {
     Escrow escrow;
 
-    address buyer    = makeAddr("buyer");
-    address seller   = makeAddr("seller");
-    address arbiter  = makeAddr("arbiter");
+    address buyer = makeAddr("buyer");
+    address seller = makeAddr("seller");
+    address arbiter = makeAddr("arbiter");
     address stranger = makeAddr("stranger");
 
-    uint constant TIMEOUT = 7 days;
-    uint constant PRICE   = 1 ether;
+    uint256 constant TIMEOUT = 7 days;
+    uint256 constant PRICE = 1 ether;
 
     function setUp() public {
         vm.deal(buyer, 10 ether);
@@ -28,7 +28,7 @@ contract EscrowTest is Test {
         assertEq(escrow.seller(), seller);
         assertEq(escrow.arbiter(), arbiter);
         assertEq(escrow.timeoutPeriod(), TIMEOUT);
-        assertEq(uint(escrow.currentState()), uint(Escrow.State.AWAITING_PAYMENT));
+        assertEq(uint256(escrow.currentState()), uint256(Escrow.State.AWAITING_PAYMENT));
     }
 
     function test_RevertWhen_SellerIsZeroAddress() public {
@@ -47,7 +47,7 @@ contract EscrowTest is Test {
         vm.prank(buyer);
         escrow.deposit{value: PRICE}();
 
-        assertEq(uint(escrow.currentState()), uint(Escrow.State.AWAITING_DELIVERY));
+        assertEq(uint256(escrow.currentState()), uint256(Escrow.State.AWAITING_DELIVERY));
         assertEq(escrow.contractBalance(), PRICE);
         assertEq(escrow.deliveryDeadline(), block.timestamp + TIMEOUT);
     }
@@ -71,9 +71,7 @@ contract EscrowTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                Escrow.InvalidState.selector,
-                Escrow.State.AWAITING_PAYMENT,
-                Escrow.State.AWAITING_DELIVERY
+                Escrow.InvalidState.selector, Escrow.State.AWAITING_PAYMENT, Escrow.State.AWAITING_DELIVERY
             )
         );
         escrow.deposit{value: PRICE}();
@@ -90,7 +88,7 @@ contract EscrowTest is Test {
 
         assertEq(seller.balance, PRICE);
         assertEq(escrow.contractBalance(), 0);
-        assertEq(uint(escrow.currentState()), uint(Escrow.State.COMPLETE));
+        assertEq(uint256(escrow.currentState()), uint256(Escrow.State.COMPLETE));
     }
 
     function test_RevertWhen_SellerConfirmsDelivery() public {
@@ -108,11 +106,7 @@ contract EscrowTest is Test {
         escrow.confirmDelivery();
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                Escrow.InvalidState.selector,
-                Escrow.State.AWAITING_DELIVERY,
-                Escrow.State.COMPLETE
-            )
+            abi.encodeWithSelector(Escrow.InvalidState.selector, Escrow.State.AWAITING_DELIVERY, Escrow.State.COMPLETE)
         );
         escrow.confirmDelivery();
         vm.stopPrank();
@@ -121,7 +115,7 @@ contract EscrowTest is Test {
     // ---------- refundBuyer ----------
 
     function test_ArbiterCanRefundBuyer() public {
-        uint buyerBalanceBefore = buyer.balance;
+        uint256 buyerBalanceBefore = buyer.balance;
 
         vm.prank(buyer);
         escrow.deposit{value: PRICE}();
@@ -130,7 +124,7 @@ contract EscrowTest is Test {
         escrow.refundBuyer();
 
         assertEq(buyer.balance, buyerBalanceBefore);
-        assertEq(uint(escrow.currentState()), uint(Escrow.State.REFUNDED));
+        assertEq(uint256(escrow.currentState()), uint256(Escrow.State.REFUNDED));
     }
 
     function test_RevertWhen_BuyerTriesToRefundSelf() public {
@@ -148,12 +142,10 @@ contract EscrowTest is Test {
         vm.prank(buyer);
         escrow.deposit{value: PRICE}();
 
-        uint deadline = escrow.deliveryDeadline();
+        uint256 deadline = escrow.deliveryDeadline();
 
         vm.prank(seller);
-        vm.expectRevert(
-            abi.encodeWithSelector(Escrow.TooEarly.selector, deadline, block.timestamp)
-        );
+        vm.expectRevert(abi.encodeWithSelector(Escrow.TooEarly.selector, deadline, block.timestamp));
         escrow.claimTimeout();
     }
 
@@ -167,7 +159,7 @@ contract EscrowTest is Test {
         escrow.claimTimeout();
 
         assertEq(seller.balance, PRICE);
-        assertEq(uint(escrow.currentState()), uint(Escrow.State.COMPLETE));
+        assertEq(uint256(escrow.currentState()), uint256(Escrow.State.COMPLETE));
     }
 
     function test_RevertWhen_StrangerClaimsTimeout() public {
@@ -187,14 +179,14 @@ contract EscrowTest is Test {
         vm.prank(buyer);
         escrow.cancel();
 
-        assertEq(uint(escrow.currentState()), uint(Escrow.State.CANCELLED));
+        assertEq(uint256(escrow.currentState()), uint256(Escrow.State.CANCELLED));
     }
 
     function test_SellerCanCancelBeforePayment() public {
         vm.prank(seller);
         escrow.cancel();
 
-        assertEq(uint(escrow.currentState()), uint(Escrow.State.CANCELLED));
+        assertEq(uint256(escrow.currentState()), uint256(Escrow.State.CANCELLED));
     }
 
     function test_RevertWhen_StrangerCancels() public {
@@ -209,9 +201,7 @@ contract EscrowTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                Escrow.InvalidState.selector,
-                Escrow.State.AWAITING_PAYMENT,
-                Escrow.State.AWAITING_DELIVERY
+                Escrow.InvalidState.selector, Escrow.State.AWAITING_PAYMENT, Escrow.State.AWAITING_DELIVERY
             )
         );
         escrow.cancel();
@@ -223,11 +213,7 @@ contract EscrowTest is Test {
         escrow.cancel();
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                Escrow.InvalidState.selector,
-                Escrow.State.AWAITING_PAYMENT,
-                Escrow.State.CANCELLED
-            )
+            abi.encodeWithSelector(Escrow.InvalidState.selector, Escrow.State.AWAITING_PAYMENT, Escrow.State.CANCELLED)
         );
         escrow.deposit{value: PRICE}();
         vm.stopPrank();

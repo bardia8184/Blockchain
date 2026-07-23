@@ -8,19 +8,25 @@ contract Escrow {
     address public immutable arbiter;
 
     // --- Timing ---
-    uint public immutable timeoutPeriod;   // seconds the buyer has to confirm
-    uint public deliveryDeadline;          // set when funds are deposited
+    uint256 public immutable timeoutPeriod; // seconds the buyer has to confirm
+    uint256 public deliveryDeadline; // set when funds are deposited
 
     // --- State machine ---
-    enum State { AWAITING_PAYMENT, AWAITING_DELIVERY, COMPLETE, REFUNDED, CANCELLED }
+    enum State {
+        AWAITING_PAYMENT,
+        AWAITING_DELIVERY,
+        COMPLETE,
+        REFUNDED,
+        CANCELLED
+    }
     State public currentState;
 
     // --- Events ---
-    event Deposited(address indexed buyer, uint amount, uint deadline);
-    event Delivered(address indexed seller, uint amount);
-    event Refunded(address indexed buyer, uint amount);
+    event Deposited(address indexed buyer, uint256 amount, uint256 deadline);
+    event Delivered(address indexed seller, uint256 amount);
+    event Refunded(address indexed buyer, uint256 amount);
     event Cancelled(address indexed by);
-    event TimeoutClaimed(address indexed seller, uint amount);
+    event TimeoutClaimed(address indexed seller, uint256 amount);
 
     // --- Errors ---
     error NotBuyer();
@@ -31,7 +37,7 @@ contract Escrow {
     error NoFundsSent();
     error InvalidAddress();
     error InvalidTimeout();
-    error TooEarly(uint deadline, uint currentTime);
+    error TooEarly(uint256 deadline, uint256 currentTime);
     error TransferFailed();
 
     // --- Modifiers ---
@@ -60,7 +66,7 @@ contract Escrow {
         _;
     }
 
-    constructor(address _seller, address _arbiter, uint _timeoutPeriod) {
+    constructor(address _seller, address _arbiter, uint256 _timeoutPeriod) {
         if (_seller == address(0) || _arbiter == address(0)) revert InvalidAddress();
         if (_timeoutPeriod == 0) revert InvalidTimeout();
         buyer = msg.sender;
@@ -78,18 +84,18 @@ contract Escrow {
     }
 
     function confirmDelivery() external onlyBuyer inState(State.AWAITING_DELIVERY) {
-        uint amount = address(this).balance;
+        uint256 amount = address(this).balance;
         currentState = State.COMPLETE;
         emit Delivered(seller, amount);
-        (bool success, ) = seller.call{value: amount}("");
+        (bool success,) = seller.call{value: amount}("");
         if (!success) revert TransferFailed();
     }
 
     function refundBuyer() external onlyArbiter inState(State.AWAITING_DELIVERY) {
-        uint amount = address(this).balance;
+        uint256 amount = address(this).balance;
         currentState = State.REFUNDED;
         emit Refunded(buyer, amount);
-        (bool success, ) = buyer.call{value: amount}("");
+        (bool success,) = buyer.call{value: amount}("");
         if (!success) revert TransferFailed();
     }
 
@@ -97,10 +103,10 @@ contract Escrow {
         if (block.timestamp < deliveryDeadline) {
             revert TooEarly(deliveryDeadline, block.timestamp);
         }
-        uint amount = address(this).balance;
+        uint256 amount = address(this).balance;
         currentState = State.COMPLETE;
         emit TimeoutClaimed(seller, amount);
-        (bool success, ) = seller.call{value: amount}("");
+        (bool success,) = seller.call{value: amount}("");
         if (!success) revert TransferFailed();
     }
 
@@ -109,7 +115,7 @@ contract Escrow {
         emit Cancelled(msg.sender);
     }
 
-    function contractBalance() external view returns (uint) {
+    function contractBalance() external view returns (uint256) {
         return address(this).balance;
     }
 }

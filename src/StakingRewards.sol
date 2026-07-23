@@ -11,31 +11,31 @@ contract StakingRewards is Ownable {
     IERC20 public immutable stakingToken;
     IERC20 public immutable rewardToken;
 
-    uint public rewardsDuration;
-    uint public rewardRate;              // reward tokens distributed per second
-    uint public periodFinish;            // when the current reward period ends
-    uint public lastUpdateTime;          // last time the accumulator was refreshed
-    uint public rewardPerTokenStored;    // the accumulator
+    uint256 public rewardsDuration;
+    uint256 public rewardRate; // reward tokens distributed per second
+    uint256 public periodFinish; // when the current reward period ends
+    uint256 public lastUpdateTime; // last time the accumulator was refreshed
+    uint256 public rewardPerTokenStored; // the accumulator
 
-    mapping(address => uint) public userRewardPerTokenPaid;
-    mapping(address => uint) public rewards;
+    mapping(address => uint256) public userRewardPerTokenPaid;
+    mapping(address => uint256) public rewards;
 
-    uint public totalStaked;
-    mapping(address => uint) public balanceOf;
+    uint256 public totalStaked;
+    mapping(address => uint256) public balanceOf;
 
-    event Staked(address indexed user, uint amount);
-    event Withdrawn(address indexed user, uint amount);
-    event RewardPaid(address indexed user, uint amount);
-    event RewardAdded(uint reward, uint periodFinish);
-    event RewardsDurationUpdated(uint duration);
+    event Staked(address indexed user, uint256 amount);
+    event Withdrawn(address indexed user, uint256 amount);
+    event RewardPaid(address indexed user, uint256 amount);
+    event RewardAdded(uint256 reward, uint256 periodFinish);
+    event RewardsDurationUpdated(uint256 duration);
 
     error InvalidAddress();
     error SameToken();
     error InvalidDuration();
     error ZeroAmount();
-    error InsufficientStake(uint requested, uint available);
-    error RewardPeriodActive(uint periodFinish);
-    error RewardTooHigh(uint rate, uint maxRate);
+    error InsufficientStake(uint256 requested, uint256 available);
+    error RewardPeriodActive(uint256 periodFinish);
+    error RewardTooHigh(uint256 rate, uint256 maxRate);
     error NoRewardToClaim();
 
     modifier updateReward(address account) {
@@ -49,9 +49,7 @@ contract StakingRewards is Ownable {
         _;
     }
 
-    constructor(address _stakingToken, address _rewardToken, uint _rewardsDuration)
-        Ownable(msg.sender)
-    {
+    constructor(address _stakingToken, address _rewardToken, uint256 _rewardsDuration) Ownable(msg.sender) {
         if (_stakingToken == address(0) || _rewardToken == address(0)) revert InvalidAddress();
         if (_stakingToken == _rewardToken) revert SameToken();
         if (_rewardsDuration == 0) revert InvalidDuration();
@@ -63,26 +61,26 @@ contract StakingRewards is Ownable {
 
     // ---------- views ----------
 
-    function lastTimeRewardApplicable() public view returns (uint) {
+    function lastTimeRewardApplicable() public view returns (uint256) {
         return block.timestamp < periodFinish ? block.timestamp : periodFinish;
     }
 
-    function rewardPerToken() public view returns (uint) {
+    function rewardPerToken() public view returns (uint256) {
         if (totalStaked == 0) {
             return rewardPerTokenStored;
         }
-        uint elapsed = lastTimeRewardApplicable() - lastUpdateTime;
+        uint256 elapsed = lastTimeRewardApplicable() - lastUpdateTime;
         return rewardPerTokenStored + (elapsed * rewardRate * 1e18) / totalStaked;
     }
 
-    function earned(address account) public view returns (uint) {
-        uint owedPerToken = rewardPerToken() - userRewardPerTokenPaid[account];
+    function earned(address account) public view returns (uint256) {
+        uint256 owedPerToken = rewardPerToken() - userRewardPerTokenPaid[account];
         return (balanceOf[account] * owedPerToken) / 1e18 + rewards[account];
     }
 
     // ---------- user actions ----------
 
-    function stake(uint amount) external updateReward(msg.sender) {
+    function stake(uint256 amount) external updateReward(msg.sender) {
         if (amount == 0) revert ZeroAmount();
 
         totalStaked += amount;
@@ -92,7 +90,7 @@ contract StakingRewards is Ownable {
         stakingToken.safeTransferFrom(msg.sender, address(this), amount);
     }
 
-    function withdraw(uint amount) public updateReward(msg.sender) {
+    function withdraw(uint256 amount) public updateReward(msg.sender) {
         if (amount == 0) revert ZeroAmount();
         if (amount > balanceOf[msg.sender]) {
             revert InsufficientStake(amount, balanceOf[msg.sender]);
@@ -106,7 +104,7 @@ contract StakingRewards is Ownable {
     }
 
     function claimReward() public updateReward(msg.sender) {
-        uint reward = rewards[msg.sender];
+        uint256 reward = rewards[msg.sender];
         if (reward == 0) revert NoRewardToClaim();
 
         rewards[msg.sender] = 0;
@@ -124,11 +122,7 @@ contract StakingRewards is Ownable {
 
     // ---------- owner ----------
 
-    function notifyRewardAmount(uint reward)
-        external
-        onlyOwner
-        updateReward(address(0))
-    {
+    function notifyRewardAmount(uint256 reward) external onlyOwner updateReward(address(0)) {
         if (reward == 0) revert ZeroAmount();
 
         rewardToken.safeTransferFrom(msg.sender, address(this), reward);
@@ -136,13 +130,13 @@ contract StakingRewards is Ownable {
         if (block.timestamp >= periodFinish) {
             rewardRate = reward / rewardsDuration;
         } else {
-            uint remaining = periodFinish - block.timestamp;
-            uint leftover = remaining * rewardRate;
+            uint256 remaining = periodFinish - block.timestamp;
+            uint256 leftover = remaining * rewardRate;
             rewardRate = (reward + leftover) / rewardsDuration;
         }
 
-        uint balance = rewardToken.balanceOf(address(this));
-        uint maxRate = balance / rewardsDuration;
+        uint256 balance = rewardToken.balanceOf(address(this));
+        uint256 maxRate = balance / rewardsDuration;
         if (rewardRate > maxRate) revert RewardTooHigh(rewardRate, maxRate);
 
         lastUpdateTime = block.timestamp;
@@ -151,7 +145,7 @@ contract StakingRewards is Ownable {
         emit RewardAdded(reward, periodFinish);
     }
 
-    function setRewardsDuration(uint _rewardsDuration) external onlyOwner {
+    function setRewardsDuration(uint256 _rewardsDuration) external onlyOwner {
         if (block.timestamp < periodFinish) revert RewardPeriodActive(periodFinish);
         if (_rewardsDuration == 0) revert InvalidDuration();
 

@@ -7,21 +7,21 @@ import {MultiSigVault} from "../src/MultiSigVault.sol";
 contract MultiSigVaultTest is Test {
     MultiSigVault vault;
 
-    address alice    = makeAddr("alice");
-    address bob      = makeAddr("bob");
-    address carol    = makeAddr("carol");
+    address alice = makeAddr("alice");
+    address bob = makeAddr("bob");
+    address carol = makeAddr("carol");
     address stranger = makeAddr("stranger");
-    address payee    = makeAddr("payee");
+    address payee = makeAddr("payee");
 
-    uint constant REQUIRED = 2;      // 2-of-3
-    uint constant FUNDING  = 10 ether;
-    uint constant PAYMENT  = 1 ether;
+    uint256 constant REQUIRED = 2; // 2-of-3
+    uint256 constant FUNDING = 10 ether;
+    uint256 constant PAYMENT = 1 ether;
 
-    event FundsReceived(address indexed from, uint amount);
-    event Submitted(uint indexed txId, address indexed to, uint value);
-    event Approved(uint indexed txId, address indexed owner);
-    event Revoked(uint indexed txId, address indexed owner);
-    event Executed(uint indexed txId, address indexed executor, uint value);
+    event FundsReceived(address indexed from, uint256 amount);
+    event Submitted(uint256 indexed txId, address indexed to, uint256 value);
+    event Approved(uint256 indexed txId, address indexed owner);
+    event Revoked(uint256 indexed txId, address indexed owner);
+    event Executed(uint256 indexed txId, address indexed executor, uint256 value);
 
     function setUp() public {
         address[] memory owners = new address[](3);
@@ -34,7 +34,7 @@ contract MultiSigVaultTest is Test {
     }
 
     // helper: submit a payment as alice
-    function _submitPayment() internal returns (uint txId) {
+    function _submitPayment() internal returns (uint256 txId) {
         vm.prank(alice);
         txId = vault.submit(payee, PAYMENT);
     }
@@ -98,7 +98,7 @@ contract MultiSigVaultTest is Test {
         emit FundsReceived(stranger, 5 ether);
 
         vm.prank(stranger);
-        (bool ok, ) = address(vault).call{value: 5 ether}("");
+        (bool ok,) = address(vault).call{value: 5 ether}("");
 
         assertTrue(ok);
         assertEq(vault.vaultBalance(), FUNDING + 5 ether);
@@ -107,12 +107,12 @@ contract MultiSigVaultTest is Test {
     // ---------- submit ----------
 
     function test_OwnerCanSubmit() public {
-        uint txId = _submitPayment();
+        uint256 txId = _submitPayment();
 
         assertEq(txId, 0);
         assertEq(vault.transactionCount(), 1);
 
-        (address to, uint value, bool executed, uint approvalCount) = vault.transactions(0);
+        (address to, uint256 value, bool executed, uint256 approvalCount) = vault.transactions(0);
         assertEq(to, payee);
         assertEq(value, PAYMENT);
         assertFalse(executed);
@@ -134,7 +134,7 @@ contract MultiSigVaultTest is Test {
     // ---------- approve ----------
 
     function test_ApprovalIsRecorded() public {
-        uint txId = _submitPayment();
+        uint256 txId = _submitPayment();
 
         vm.prank(alice);
         vault.approve(txId);
@@ -142,12 +142,12 @@ contract MultiSigVaultTest is Test {
         assertTrue(vault.approvedBy(txId, alice));
         assertFalse(vault.approvedBy(txId, bob));
 
-        (, , , uint approvalCount) = vault.transactions(txId);
+        (,,, uint256 approvalCount) = vault.transactions(txId);
         assertEq(approvalCount, 1);
     }
 
     function test_RevertWhen_StrangerApproves() public {
-        uint txId = _submitPayment();
+        uint256 txId = _submitPayment();
 
         vm.prank(stranger);
         vm.expectRevert(MultiSigVault.NotOwner.selector);
@@ -156,21 +156,17 @@ contract MultiSigVaultTest is Test {
 
     function test_RevertWhen_ApprovingNonexistentTx() public {
         vm.prank(alice);
-        vm.expectRevert(
-            abi.encodeWithSelector(MultiSigVault.TxDoesNotExist.selector, uint(99))
-        );
+        vm.expectRevert(abi.encodeWithSelector(MultiSigVault.TxDoesNotExist.selector, uint256(99)));
         vault.approve(99);
     }
 
     function test_RevertWhen_ApprovingTwice() public {
-        uint txId = _submitPayment();
+        uint256 txId = _submitPayment();
 
         vm.startPrank(alice);
         vault.approve(txId);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(MultiSigVault.AlreadyApproved.selector, txId)
-        );
+        vm.expectRevert(abi.encodeWithSelector(MultiSigVault.AlreadyApproved.selector, txId));
         vault.approve(txId);
         vm.stopPrank();
     }
@@ -178,7 +174,7 @@ contract MultiSigVaultTest is Test {
     // ---------- revoke ----------
 
     function test_OwnerCanRevokeApproval() public {
-        uint txId = _submitPayment();
+        uint256 txId = _submitPayment();
 
         vm.startPrank(alice);
         vault.approve(txId);
@@ -187,22 +183,20 @@ contract MultiSigVaultTest is Test {
 
         assertFalse(vault.approvedBy(txId, alice));
 
-        (, , , uint approvalCount) = vault.transactions(txId);
+        (,,, uint256 approvalCount) = vault.transactions(txId);
         assertEq(approvalCount, 0);
     }
 
     function test_RevertWhen_RevokingWithoutApproval() public {
-        uint txId = _submitPayment();
+        uint256 txId = _submitPayment();
 
         vm.prank(alice);
-        vm.expectRevert(
-            abi.encodeWithSelector(MultiSigVault.NotApproved.selector, txId)
-        );
+        vm.expectRevert(abi.encodeWithSelector(MultiSigVault.NotApproved.selector, txId));
         vault.revoke(txId);
     }
 
     function test_RevokeCanBlockExecution() public {
-        uint txId = _submitPayment();
+        uint256 txId = _submitPayment();
 
         vm.prank(alice);
         vault.approve(txId);
@@ -214,16 +208,14 @@ contract MultiSigVaultTest is Test {
         vault.revoke(txId);
 
         vm.prank(alice);
-        vm.expectRevert(
-            abi.encodeWithSelector(MultiSigVault.NotEnoughApprovals.selector, uint(1), REQUIRED)
-        );
+        vm.expectRevert(abi.encodeWithSelector(MultiSigVault.NotEnoughApprovals.selector, uint256(1), REQUIRED));
         vault.execute(txId);
     }
 
     // ---------- execute ----------
 
     function test_ExecuteSendsFundsWhenThresholdMet() public {
-        uint txId = _submitPayment();
+        uint256 txId = _submitPayment();
 
         vm.prank(alice);
         vault.approve(txId);
@@ -236,20 +228,18 @@ contract MultiSigVaultTest is Test {
         assertEq(payee.balance, PAYMENT);
         assertEq(vault.vaultBalance(), FUNDING - PAYMENT);
 
-        (, , bool executed, ) = vault.transactions(txId);
+        (,, bool executed,) = vault.transactions(txId);
         assertTrue(executed);
     }
 
     /// THE core guarantee: one owner alone cannot move funds.
     function test_RevertWhen_SingleOwnerTriesToExecute() public {
-        uint txId = _submitPayment();
+        uint256 txId = _submitPayment();
 
         vm.startPrank(alice);
         vault.approve(txId);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(MultiSigVault.NotEnoughApprovals.selector, uint(1), REQUIRED)
-        );
+        vm.expectRevert(abi.encodeWithSelector(MultiSigVault.NotEnoughApprovals.selector, uint256(1), REQUIRED));
         vault.execute(txId);
         vm.stopPrank();
 
@@ -258,17 +248,15 @@ contract MultiSigVaultTest is Test {
     }
 
     function test_RevertWhen_NoApprovalsAtAll() public {
-        uint txId = _submitPayment();
+        uint256 txId = _submitPayment();
 
         vm.prank(alice);
-        vm.expectRevert(
-            abi.encodeWithSelector(MultiSigVault.NotEnoughApprovals.selector, uint(0), REQUIRED)
-        );
+        vm.expectRevert(abi.encodeWithSelector(MultiSigVault.NotEnoughApprovals.selector, uint256(0), REQUIRED));
         vault.execute(txId);
     }
 
     function test_RevertWhen_StrangerExecutes() public {
-        uint txId = _submitPayment();
+        uint256 txId = _submitPayment();
 
         vm.prank(alice);
         vault.approve(txId);
@@ -281,7 +269,7 @@ contract MultiSigVaultTest is Test {
     }
 
     function test_RevertWhen_ExecutingTwice() public {
-        uint txId = _submitPayment();
+        uint256 txId = _submitPayment();
 
         vm.prank(alice);
         vault.approve(txId);
@@ -291,16 +279,14 @@ contract MultiSigVaultTest is Test {
         vm.startPrank(alice);
         vault.execute(txId);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(MultiSigVault.AlreadyExecuted.selector, txId)
-        );
+        vm.expectRevert(abi.encodeWithSelector(MultiSigVault.AlreadyExecuted.selector, txId));
         vault.execute(txId);
         vm.stopPrank();
     }
 
     function test_RevertWhen_VaultCannotCoverPayment() public {
         vm.prank(alice);
-        uint txId = vault.submit(payee, 100 ether);   // more than the vault holds
+        uint256 txId = vault.submit(payee, 100 ether); // more than the vault holds
 
         vm.prank(alice);
         vault.approve(txId);
@@ -308,18 +294,12 @@ contract MultiSigVaultTest is Test {
         vault.approve(txId);
 
         vm.prank(alice);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                MultiSigVault.InsufficientBalance.selector,
-                FUNDING,
-                uint(100 ether)
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(MultiSigVault.InsufficientBalance.selector, FUNDING, uint256(100 ether)));
         vault.execute(txId);
     }
 
     function test_RevertWhen_ApprovingAfterExecution() public {
-        uint txId = _submitPayment();
+        uint256 txId = _submitPayment();
 
         vm.prank(alice);
         vault.approve(txId);
@@ -329,9 +309,7 @@ contract MultiSigVaultTest is Test {
         vault.execute(txId);
 
         vm.prank(carol);
-        vm.expectRevert(
-            abi.encodeWithSelector(MultiSigVault.AlreadyExecuted.selector, txId)
-        );
+        vm.expectRevert(abi.encodeWithSelector(MultiSigVault.AlreadyExecuted.selector, txId));
         vault.approve(txId);
     }
 
@@ -339,9 +317,9 @@ contract MultiSigVaultTest is Test {
 
     function test_TwoIndependentTransactions() public {
         vm.prank(alice);
-        uint tx1 = vault.submit(payee, 1 ether);
+        uint256 tx1 = vault.submit(payee, 1 ether);
         vm.prank(bob);
-        uint tx2 = vault.submit(stranger, 2 ether);
+        uint256 tx2 = vault.submit(stranger, 2 ether);
 
         // approve and execute only the first
         vm.prank(alice);
@@ -354,8 +332,8 @@ contract MultiSigVaultTest is Test {
         assertEq(payee.balance, 1 ether);
         assertEq(stranger.balance, 0);
 
-        (, , bool executed1, ) = vault.transactions(tx1);
-        (, , bool executed2, ) = vault.transactions(tx2);
+        (,, bool executed1,) = vault.transactions(tx1);
+        (,, bool executed2,) = vault.transactions(tx2);
         assertTrue(executed1);
         assertFalse(executed2);
     }

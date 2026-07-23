@@ -7,30 +7,30 @@ import {TokenSale} from "../src/TokenSale.sol";
 import {MyToken} from "../src/MyToken.sol";
 
 contract TokenSaleTest is Test {
-    MyToken   token;
+    MyToken token;
     TokenSale sale;
 
-    address owner    = makeAddr("owner");
-    address buyer    = makeAddr("buyer");
-    address buyer2   = makeAddr("buyer2");
+    address owner = makeAddr("owner");
+    address buyer = makeAddr("buyer");
+    address buyer2 = makeAddr("buyer2");
     address stranger = makeAddr("stranger");
 
-    uint constant RATE        = 1000;              // 1000 MTK per 1 ETH
-    uint constant DURATION    = 7 days;
-    uint constant SALE_SUPPLY = 500_000 ether;     // 500k tokens (18 decimals)
+    uint256 constant RATE = 1000; // 1000 MTK per 1 ETH
+    uint256 constant DURATION = 7 days;
+    uint256 constant SALE_SUPPLY = 500_000 ether; // 500k tokens (18 decimals)
 
-    event TokensPurchased(address indexed buyer, uint ethPaid, uint tokensReceived);
-    event ProceedsWithdrawn(address indexed to, uint amount);
-    event UnsoldTokensRecovered(address indexed to, uint amount);
+    event TokensPurchased(address indexed buyer, uint256 ethPaid, uint256 tokensReceived);
+    event ProceedsWithdrawn(address indexed to, uint256 amount);
+    event UnsoldTokensRecovered(address indexed to, uint256 amount);
 
     function setUp() public {
         vm.startPrank(owner);
         token = new MyToken();
-        sale  = new TokenSale(address(token), RATE, DURATION);
+        sale = new TokenSale(address(token), RATE, DURATION);
         require(token.transfer(address(sale), SALE_SUPPLY), "setup transfer failed");
         vm.stopPrank();
 
-        vm.deal(buyer,  100 ether);
+        vm.deal(buyer, 100 ether);
         vm.deal(buyer2, 100 ether);
     }
 
@@ -67,7 +67,7 @@ contract TokenSaleTest is Test {
         vm.prank(buyer);
         sale.buy{value: 1 ether}();
 
-        assertEq(token.balanceOf(buyer), 1000 ether);          // 1 ETH * rate
+        assertEq(token.balanceOf(buyer), 1000 ether); // 1 ETH * rate
         assertEq(sale.tokensRemaining(), SALE_SUPPLY - 1000 ether);
         assertEq(sale.contributions(buyer), 1 ether);
         assertEq(sale.totalRaised(), 1 ether);
@@ -98,10 +98,10 @@ contract TokenSaleTest is Test {
         vm.prank(buyer2);
         sale.buy{value: 5 ether}();
 
-        assertEq(sale.contributions(buyer),  1 ether);
+        assertEq(sale.contributions(buyer), 1 ether);
         assertEq(sale.contributions(buyer2), 5 ether);
         assertEq(sale.totalRaised(), 6 ether);
-        assertEq(token.balanceOf(buyer),  1000 ether);
+        assertEq(token.balanceOf(buyer), 1000 ether);
         assertEq(token.balanceOf(buyer2), 5000 ether);
     }
 
@@ -124,11 +124,7 @@ contract TokenSaleTest is Test {
 
         vm.prank(buyer);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                TokenSale.NotEnoughTokensLeft.selector,
-                uint(501_000 ether),
-                SALE_SUPPLY
-            )
+            abi.encodeWithSelector(TokenSale.NotEnoughTokensLeft.selector, uint256(501_000 ether), SALE_SUPPLY)
         );
         sale.buy{value: 501 ether}();
     }
@@ -149,7 +145,7 @@ contract TokenSaleTest is Test {
         vm.prank(buyer);
         sale.buy{value: 4 ether}();
 
-        uint ownerBefore = owner.balance;
+        uint256 ownerBefore = owner.balance;
 
         vm.prank(owner);
         sale.withdrawProceeds();
@@ -163,9 +159,7 @@ contract TokenSaleTest is Test {
         sale.buy{value: 1 ether}();
 
         vm.prank(stranger);
-        vm.expectRevert(
-            abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, stranger)
-        );
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, stranger));
         sale.withdrawProceeds();
     }
 
@@ -179,11 +173,11 @@ contract TokenSaleTest is Test {
 
     function test_OwnerCanRecoverUnsoldTokensAfterSale() public {
         vm.prank(buyer);
-        sale.buy{value: 10 ether}();          // 10,000 tokens sold
+        sale.buy{value: 10 ether}(); // 10,000 tokens sold
 
         vm.warp(block.timestamp + DURATION);
 
-        uint ownerBefore = token.balanceOf(owner);
+        uint256 ownerBefore = token.balanceOf(owner);
 
         vm.prank(owner);
         sale.recoverUnsoldTokens();
@@ -202,16 +196,14 @@ contract TokenSaleTest is Test {
         vm.warp(block.timestamp + DURATION);
 
         vm.prank(stranger);
-        vm.expectRevert(
-            abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, stranger)
-        );
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, stranger));
         sale.recoverUnsoldTokens();
     }
 
     function test_RevertWhen_RecoveringWithNothingLeft() public {
         vm.deal(buyer, 600 ether);
         vm.prank(buyer);
-        sale.buy{value: 500 ether}();         // buys everything
+        sale.buy{value: 500 ether}(); // buys everything
 
         vm.warp(block.timestamp + DURATION);
 

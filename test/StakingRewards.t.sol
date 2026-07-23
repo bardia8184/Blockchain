@@ -11,42 +11,38 @@ contract StakingRewardsTest is Test {
     MyToken stakingToken;
     MyToken rewardToken;
 
-    address owner    = makeAddr("owner");
-    address alice    = makeAddr("alice");
-    address bob      = makeAddr("bob");
+    address owner = makeAddr("owner");
+    address alice = makeAddr("alice");
+    address bob = makeAddr("bob");
     address stranger = makeAddr("stranger");
 
-    uint constant DURATION      = 7 days;          // 604,800 seconds
-    uint constant REWARD_AMOUNT = 604_800 ether;   // => exactly 1 token/second
-    uint constant STAKE         = 100 ether;
+    uint256 constant DURATION = 7 days; // 604,800 seconds
+    uint256 constant REWARD_AMOUNT = 604_800 ether; // => exactly 1 token/second
+    uint256 constant STAKE = 100 ether;
 
-    event Staked(address indexed user, uint amount);
-    event Withdrawn(address indexed user, uint amount);
-    event RewardPaid(address indexed user, uint amount);
+    event Staked(address indexed user, uint256 amount);
+    event Withdrawn(address indexed user, uint256 amount);
+    event RewardPaid(address indexed user, uint256 amount);
 
     function setUp() public {
         vm.startPrank(owner);
         stakingToken = new MyToken();
-        rewardToken  = new MyToken();
-        staking = new StakingRewards(
-            address(stakingToken),
-            address(rewardToken),
-            DURATION
-        );
+        rewardToken = new MyToken();
+        staking = new StakingRewards(address(stakingToken), address(rewardToken), DURATION);
 
         // fund users with staking tokens
         require(stakingToken.transfer(alice, 1000 ether), "fund alice");
-        require(stakingToken.transfer(bob,   1000 ether), "fund bob");
+        require(stakingToken.transfer(bob, 1000 ether), "fund bob");
 
         // owner approves the staking contract to pull reward tokens
-        rewardToken.approve(address(staking), type(uint).max);
+        rewardToken.approve(address(staking), type(uint256).max);
         vm.stopPrank();
 
         // users approve the staking contract to pull their stake
         vm.prank(alice);
-        stakingToken.approve(address(staking), type(uint).max);
+        stakingToken.approve(address(staking), type(uint256).max);
         vm.prank(bob);
-        stakingToken.approve(address(staking), type(uint).max);
+        stakingToken.approve(address(staking), type(uint256).max);
     }
 
     function _startRewards() internal {
@@ -85,16 +81,14 @@ contract StakingRewardsTest is Test {
     function test_NotifyRewardSetsRateAndDeadline() public {
         _startRewards();
 
-        assertEq(staking.rewardRate(), 1 ether);                     // 1 token per second
+        assertEq(staking.rewardRate(), 1 ether); // 1 token per second
         assertEq(staking.periodFinish(), block.timestamp + DURATION);
         assertEq(rewardToken.balanceOf(address(staking)), REWARD_AMOUNT);
     }
 
     function test_RevertWhen_StrangerNotifiesReward() public {
         vm.prank(stranger);
-        vm.expectRevert(
-            abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, stranger)
-        );
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, stranger));
         staking.notifyRewardAmount(REWARD_AMOUNT);
     }
 
@@ -178,8 +172,8 @@ contract StakingRewardsTest is Test {
 
         vm.warp(block.timestamp + 100);
 
-        assertEq(staking.earned(alice), 75 ether);   // 3/4 of 100
-        assertEq(staking.earned(bob), 25 ether);     // 1/4 of 100
+        assertEq(staking.earned(alice), 75 ether); // 3/4 of 100
+        assertEq(staking.earned(bob), 25 ether); // 1/4 of 100
     }
 
     function test_RewardsStopAfterPeriodFinish() public {
@@ -189,7 +183,7 @@ contract StakingRewardsTest is Test {
         staking.stake(STAKE);
 
         vm.warp(block.timestamp + DURATION);
-        uint earnedAtEnd = staking.earned(alice);
+        uint256 earnedAtEnd = staking.earned(alice);
 
         vm.warp(block.timestamp + 30 days);
         assertEq(staking.earned(alice), earnedAtEnd);
@@ -264,7 +258,7 @@ contract StakingRewardsTest is Test {
         assertEq(staking.balanceOf(alice), 0);
         assertEq(staking.totalStaked(), 0);
         assertEq(stakingToken.balanceOf(alice), 1000 ether);
-        assertEq(staking.earned(alice), 100 ether);   // rewards survive withdrawal
+        assertEq(staking.earned(alice), 100 ether); // rewards survive withdrawal
     }
 
     function test_PartialWithdrawKeepsEarningOnRemainder() public {
@@ -292,13 +286,7 @@ contract StakingRewardsTest is Test {
         staking.stake(STAKE);
 
         vm.prank(alice);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                StakingRewards.InsufficientStake.selector,
-                uint(200 ether),
-                STAKE
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(StakingRewards.InsufficientStake.selector, uint256(200 ether), STAKE));
         staking.withdraw(200 ether);
     }
 
@@ -334,20 +322,16 @@ contract StakingRewardsTest is Test {
     function test_RevertWhen_ChangingDurationDuringActivePeriod() public {
         _startRewards();
 
-        uint finish = staking.periodFinish();
+        uint256 finish = staking.periodFinish();
 
         vm.prank(owner);
-        vm.expectRevert(
-            abi.encodeWithSelector(StakingRewards.RewardPeriodActive.selector, finish)
-        );
+        vm.expectRevert(abi.encodeWithSelector(StakingRewards.RewardPeriodActive.selector, finish));
         staking.setRewardsDuration(14 days);
     }
 
     function test_RevertWhen_StrangerChangesDuration() public {
         vm.prank(stranger);
-        vm.expectRevert(
-            abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, stranger)
-        );
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, stranger));
         staking.setRewardsDuration(14 days);
     }
 }
