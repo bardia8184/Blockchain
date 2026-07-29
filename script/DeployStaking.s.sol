@@ -6,9 +6,9 @@ import {TestToken} from "../src/TestToken.sol";
 import {StakingRewards} from "../src/StakingRewards.sol";
 
 contract DeployStaking is Script {
-    uint constant DURATION = 7 days;
-    uint constant REWARD_POOL = 604_800 ether; // exactly 1 token per second
-    uint constant STAKE_SUPPLY = 1_000_000 ether;
+    uint256 constant DURATION = 7 days;
+    uint256 constant REWARD_POOL = 604_800 ether; // exactly 1 token per second
+    uint256 constant STAKE_SUPPLY = 1_000_000 ether;
 
     function run() external {
         vm.startBroadcast();
@@ -16,8 +16,7 @@ contract DeployStaking is Script {
         TestToken stakeToken = new TestToken("Stake Token", "STK", STAKE_SUPPLY);
         TestToken rewardToken = new TestToken("Reward Token", "RWD", REWARD_POOL);
 
-        StakingRewards staking =
-            new StakingRewards(address(stakeToken), address(rewardToken), DURATION);
+        StakingRewards staking = new StakingRewards(address(stakeToken), address(rewardToken), DURATION);
 
         rewardToken.approve(address(staking), REWARD_POOL);
         staking.notifyRewardAmount(REWARD_POOL);

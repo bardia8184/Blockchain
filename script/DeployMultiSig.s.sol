@@ -15,7 +15,7 @@ contract DeployMultiSig is Script {
         owners[1] = owner2;
         owners[2] = owner3;
 
-        uint required = 2; // 2-of-3
+        uint256 required = 2; // 2-of-3
 
         vm.startBroadcast();
         MultiSigVault vault = new MultiSigVault(owners, required);
