@@ -1,6 +1,8 @@
 # Blockchain Portfolio
-> A live full-stack dApp built on the `StakingRewards` contract here:
-> **[Staking-Dapp](https://github.com/bardia8184/Staking-Dapp)** — Next.js + wagmi + viem, deployed on Sepolia.
+
+> **Live full-stack dApps built on these contracts:**
+> - [Staking-Dapp](https://github.com/bardia8184/Staking-Dapp) — stake, earn, claim, with live reward accrual
+> - [MultiSig-Dapp](https://github.com/bardia8184/MultiSig-Dapp) — propose, approve, and execute vault transactions
 
 Production-style Solidity contracts built with Foundry, with full test coverage
 including negative cases for every access-control rule, state transition, and
