@@ -1,8 +1,8 @@
 # Blockchain Portfolio
 
 > **Live full-stack dApps built on these contracts:**
-> - [Staking-Dapp](https://github.com/bardia8184/Staking-Dapp) — stake, earn, claim, with live reward accrual
-> - [MultiSig-Dapp](https://github.com/bardia8184/MultiSig-Dapp) — propose, approve, and execute vault transactions
+> - [Staking-Dapp](https://github.com/bardia8184/Staking-Dapp) ([live demo](https://staking-dapp-indol.vercel.app)) — stake, earn, claim, with live reward accrual
+> - [MultiSig-Dapp](https://github.com/bardia8184/MultiSig-Dapp) ([live demo](https://multi-sig-dapp.vercel.app)) — propose, approve, and execute vault transactions
 
 Production-style Solidity contracts built with Foundry, with full test coverage
 including negative cases for every access-control rule, state transition, and
